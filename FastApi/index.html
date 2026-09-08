@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 实时构建日志</title>
+    <style>
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: 'Courier New', monospace;
+            padding: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        #project-input {
+            background: #161b22;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 200px;
+        }
+        #start-btn {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #start-btn:hover { background: #2ea043; }
+        #status-badge {
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .idle { background: #30363d; color: #8b949e; }
+        .running { background: #1f6feb; color: white; animation: pulse 1.5s infinite; }
+        .success { background: #238636; color: white; }
+        .failed { background: #da3633; color: white; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        #log-container {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        #log-container::-webkit-scrollbar { width: 8px; }
+        #log-container::-webkit-scrollbar-track { background: #161b22; border-radius: 4px; }
+        #log-container::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+
+        .log-line { padding: 2px 0; border-bottom: 1px solid #161b22; }
+        .log-info { color: #8b949e; }
+        .log-success { color: #3fb950; }
+        .log-error { color: #f85149; }
+        .log-warning { color: #d29922; }
+        .log-divider { color: #30363d; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>📋 CI / CD 构建日志</h1>
+    <div class="header">
+        <div class="controls">
+            <input type="text" id="project-input" value="my-app" placeholder="项目名称">
+            <button id="start-btn">▶ 开始构建</button>
+        </div>
+        <span id="status-badge" class="idle">空闲</span>
+    </div>
+    <div id="log-container">
+        <div class="log-line log-info">💡 输入项目名称，点击 "开始构建" 查看实时日志...</div>
+    </div>
+
+    <script>
+        const logContainer = document.getElementById('log-container');
+        const statusBadge = document.getElementById('status-badge');
+        const startBtn = document.getElementById('start-btn');
+        const projectInput = document.getElementById('project-input');
+
+        let eventSource = null;
+
+        function addLog(level, message) {
+            const div = document.createElement('div');
+            div.className = `log-line log-${level}`;
+            div.textContent = message;
+            logContainer.appendChild(div);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function setStatus(state, text) {
+            statusBadge.textContent = text;
+            statusBadge.className = state;
+        }
+
+        function connect(project) {
+            // 关闭旧连接
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            // 清空日志（保留提示）
+            logContainer.innerHTML = `<div class="log-line log-info">⏳ 正在连接构建服务器 (${project})...</div>`;
+            setStatus('running', '运行中...');
+
+            // 发起 SSE 连接
+            eventSource = new EventSource(`/build/logs?project=${encodeURIComponent(project)}`);
+
+            // 监听 log 事件
+            eventSource.addEventListener('log', function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    addLog(data.level, data.message);
+                } catch (err) {
+                    console.error('解析日志失败:', err);
+                }
+            });
+
+            // 监听 done 事件
+            eventSource.addEventListener('done', function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.status === 'success') {
+                        setStatus('success', '✅ 构建成功');
+                        addLog('success', '🎉 所有阶段完成！');
+                    } else {
+                        setStatus('failed', '❌ 构建失败');
+                        addLog('error', '💥 流程终止，请检查错误日志。');
+                    }
+                } catch (err) {
+                    console.error('解析结束信号失败:', err);
+                }
+                eventSource.close();
+                eventSource = null;
+            });
+
+            // 连接错误（含自动重连，我们直接停止并提示）
+            eventSource.onerror = function(e) {
+                if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+                    setStatus('failed', '连接中断');
+                    addLog('error', '🔌 与服务器的连接已断开。');
+                    eventSource.close();
+                    eventSource = null;
+                }
+            };
+        }
+
+        startBtn.addEventListener('click', function() {
+            const project = projectInput.value.trim() || 'default-app';
+            connect(project);
+        });
+
+        // 页面加载后自动执行一次
+        window.onload = function() {
+            connect('my-app');
+        };
+    </script>
+</body>
+</html>

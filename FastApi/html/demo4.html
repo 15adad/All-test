@@ -1,0 +1,137 @@
+# 4. 前端页面（可直接访问根目录 /）
+# ============================================================
+@app.get("/")
+async def home():
+    html_content = """
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>实时股票看板</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Arial, sans-serif;
+                background: #0d1117;
+                color: #e6edf3;
+                padding: 30px;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            h1 { text-align: center; color: #58a6ff; }
+            .status {
+                text-align: center;
+                color: #8b949e;
+                font-size: 14px;
+                margin-bottom: 20px;
+            }
+            .board {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 20px;
+            }
+            .card {
+                background: #161b22;
+                border-radius: 12px;
+                padding: 20px;
+                border: 1px solid #30363d;
+                text-align: center;
+                transition: all 0.3s ease;
+            }
+            .card .symbol {
+                font-size: 20px;
+                font-weight: bold;
+                color: #58a6ff;
+            }
+            .card .price {
+                font-size: 32px;
+                font-weight: bold;
+                margin: 10px 0;
+            }
+            .card .change {
+                font-size: 16px;
+                font-weight: 600;
+            }
+            .card .change.up { color: #3fb950; }
+            .card .change.down { color: #f85149; }
+            .card .change.flat { color: #8b949e; }
+            .update-info {
+                text-align: center;
+                margin-top: 20px;
+                color: #8b949e;
+                font-size: 13px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>📈 实时行情看板</h1>
+        <div class="status" id="status">⏳ 连接中...</div>
+        <div class="board" id="board"></div>
+        <div class="update-info" id="info">等待数据...</div>
+
+        <script>
+            const board = document.getElementById('board');
+            const statusDiv = document.getElementById('status');
+            const infoDiv = document.getElementById('info');
+            
+            // 初始化股票卡片
+            const symbols = ['AAPL', 'TSLA', 'NVDA'];
+            const cardMap = {};
+            symbols.forEach(sym => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = `card-${sym}`;
+                card.innerHTML = `
+                    <div class="symbol">${sym}</div>
+                    <div class="price" id="price-${sym}">--</div>
+                    <div class="change" id="change-${sym}">等待数据...</div>
+                `;
+                board.appendChild(card);
+                cardMap[sym] = card;
+            });
+
+            // 建立 SSE 连接
+            const source = new EventSource('/stocks/stream');
+            
+            // 监听 tick 事件（后端 event="tick" 的数据）
+            source.addEventListener('tick', function(e) {
+                const data = JSON.parse(e.data);
+                const priceEl = document.getElementById(`price-${data.symbol}`);
+                const changeEl = document.getElementById(`change-${data.symbol}`);
+                
+                // 更新价格
+                priceEl.textContent = `$${data.price.toFixed(2)}`;
+                
+                // 更新涨跌信息
+                const changeText = `${data.change >= 0 ? '+' : ''}${data.change.toFixed(2)} (${data.change_percent >= 0 ? '+' : ''}${data.change_percent.toFixed(2)}%)`;
+                changeEl.textContent = changeText;
+                changeEl.className = 'change';
+                if (data.change > 0) {
+                    changeEl.classList.add('up');
+                } else if (data.change < 0) {
+                    changeEl.classList.add('down');
+                } else {
+                    changeEl.classList.add('flat');
+                }
+                
+                // 更新状态栏
+                statusDiv.textContent = `🟢 已接收 ${data.update_id} 条更新`;
+                infoDiv.textContent = `⏱️ 最新更新: ${data.symbol} @ $${data.price.toFixed(2)}`;
+            });
+
+            // 连接建立
+            source.onopen = function() {
+                statusDiv.textContent = '🟢 连接已建立，等待行情数据...';
+            };
+
+            // 连接错误（含自动重连）
+            source.onerror = function() {
+                if (source.readyState === EventSource.CLOSED) {
+                    statusDiv.textContent = '🔴 连接已关闭';
+                } else {
+                    statusDiv.textContent = '🔄 连接中断，自动重连中...';
+                }
+            };
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
