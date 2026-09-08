@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 AI 聊天机器人</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 720px;
+            height: 90vh;
+            background: #161b22;
+            border-radius: 16px;
+            border: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            padding: 16px 20px;
+            background: #1c2333;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header h2 {
+            color: #58a6ff;
+            font-size: 18px;
+        }
+        .chat-header .badge {
+            background: #238636;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-messages::-webkit-scrollbar-track {
+            background: #161b22;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 3px;
+        }
+        .message {
+            max-width: 85%;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.6;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            align-self: flex-end;
+            background: #1f6feb;
+            color: white;
+        }
+        .message.assistant {
+            align-self: flex-start;
+            background: #21262d;
+            color: #e6edf3;
+            border: 1px solid #30363d;
+        }
+        .message .cursor {
+            display: inline-block;
+            width: 3px;
+            height: 18px;
+            background: #58a6ff;
+            margin-left: 2px;
+            animation: blink 0.8s step-end infinite;
+            vertical-align: text-bottom;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .chat-input-area {
+            padding: 12px 20px 16px;
+            border-top: 1px solid #30363d;
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input-area input {
+            flex: 1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: #e6edf3;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .chat-input-area input:focus {
+            border-color: #58a6ff;
+        }
+        .chat-input-area input::placeholder {
+            color: #8b949e;
+        }
+        .chat-input-area button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .chat-input-area button:hover {
+            background: #2ea043;
+        }
+        .chat-input-area button:disabled {
+            background: #30363d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .chat-input-area button.stop-btn {
+            background: #da3633;
+        }
+        .chat-input-area button.stop-btn:hover {
+            background: #f85149;
+        }
+        .status-bar {
+            padding: 4px 20px 8px;
+            font-size: 12px;
+            color: #8b949e;
+            border-top: 1px solid #21262d;
+            display: flex;
+            justify-content: space-between;
+        }
+        .clear-btn {
+            background: transparent;
+            border: none;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: underline;
+        }
+        .clear-btn:hover {
+            color: #f85149;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <!-- 头部 -->
+        <div class="chat-header">
+            <h2>🤖 AI 聊天机器人</h2>
+            <span class="badge" id="status-badge">● 已连接</span>
+        </div>
+
+        <!-- 消息区 -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                👋 你好！我是 AI 聊天机器人。输入消息开始对话吧！
+            </div>
+        </div>
+
+        <!-- 状态栏 -->
+        <div class="status-bar">
+            <span id="sessionInfo">会话: 未初始化</span>
+            <button class="clear-btn" id="clearBtn">🗑️ 清空对话</button>
+        </div>
+
+        <!-- 输入区 -->
+        <div class="chat-input-area">
+            <input type="text" id="messageInput" placeholder="输入消息..." />
+            <button id="sendBtn">发送</button>
+            <button id="stopBtn" class="stop-btn" style="display:none;">⏹ 停止</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // 前端核心逻辑
+        // ============================================================
+
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusBadge = document.getElementById('status-badge');
+        const sessionInfo = document.getElementById('sessionInfo');
+        const clearBtn = document.getElementById('clearBtn');
+
+        // 状态管理
+        let sessionId = localStorage.getItem('chat_session_id') || null;
+        let isStreaming = false;
+        let eventSource = null;
+        let currentAssistantMessage = null;
+
+        // 初始化：如果有 sessionId 就显示
+        if (sessionId) {
+            sessionInfo.textContent = `会话: ${sessionId.substring(0, 8)}...`;
+        }
+
+        // ============================================================
+        // 核心函数：发送消息
+        // ============================================================
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isStreaming) return;
+
+            // 生成 sessionId（如果没有）
+            if (!sessionId) {
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+                localStorage.setItem('chat_session_id', sessionId);
+                sessionInfo.textContent = `会话: ${sessionId.substring(0, 8)}...`;
+            }
+
+            // 1. 在界面上显示用户消息
+            addMessage('user', message);
+            messageInput.value = '';
+            messageInput.focus();
+
+            // 2. 禁用发送按钮，显示停止按钮
+            sendBtn.disabled = true;
+            isStreaming = true;
+            stopBtn.style.display = 'inline-block';
+            statusBadge.textContent = '● 生成中...';
+            statusBadge.style.color = '#d29922';
+
+            // 3. 创建 AI 消息占位
+            currentAssistantMessage = addMessage('assistant', '', true);
+            const messageContent = currentAssistantMessage.querySelector('.content') || currentAssistantMessage;
+
+            let fullText = '';
+            let charIndex = 0;
+
+            // 4. 建立 SSE 连接
+            const url = `/api/chat/stream?${new URLSearchParams({
+                message: message,
+                session_id: sessionId
+            })}`;
+
+            // 注意：POST 请求不能用 EventSource，改用 fetch + ReadableStream
+            // 但为了简化，我们改为 GET + 参数（但标准是 POST，这里用 fetch 实现）
+            // 由于 FastAPI 路由是 POST，我们用 fetch 的 ReadableStream 处理
+            fetch('/api/chat/stream', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    session_id: sessionId
+                })
+            }).then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                function readStream() {
+                    reader.read().then(({ done, value }) => {
+                        if (done) {
+                            // 流结束
+                            finishStreaming();
+                            return;
+                        }
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        // SSE 数据格式: event: token\ndata: {...}\n\n
+                        const lines = chunk.split('\n');
+                        let eventType = null;
+                        let dataLine = null;
+
+                        for (const line of lines) {
+                            if (line.startsWith('event:')) {
+                                eventType = line.replace('event:', '').trim();
+                            } else if (line.startsWith('data:')) {
+                                dataLine = line.replace('data:', '').trim();
+                            } else if (line === '' && dataLine) {
+                                // 一个完整的事件结束
+                                if (eventType === 'token') {
+                                    try {
+                                        const data = JSON.parse(dataLine);
+                                        if (!data.done) {
+                                            fullText += data.char;
+                                            // 更新消息内容
+                                            messageContent.textContent = fullText;
+                                            // 添加光标效果
+                                            if (!messageContent.querySelector('.cursor')) {
+                                                const cursor = document.createElement('span');
+                                                cursor.className = 'cursor';
+                                                messageContent.appendChild(cursor);
+                                            }
+                                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                                        }
+                                    } catch (e) {
+                                        console.error('解析 token 失败:', e);
+                                    }
+                                } else if (eventType === 'done') {
+                                    try {
+                                        const data = JSON.parse(dataLine);
+                                        console.log('对话完成:', data);
+                                        // 移除光标
+                                        const cursor = messageContent.querySelector('.cursor');
+                                        if (cursor) cursor.remove();
+                                        finishStreaming();
+                                    } catch (e) {
+                                        console.error('解析 done 失败:', e);
+                                    }
+                                }
+                                eventType = null;
+                                dataLine = null;
+                            }
+                        }
+
+                        // 继续读取
+                        readStream();
+                    });
+                }
+
+                readStream();
+            }).catch(error => {
+                console.error('连接错误:', error);
+                statusBadge.textContent = '✗ 连接失败';
+                statusBadge.style.color = '#f85149';
+                finishStreaming();
+            });
+        }
+
+        // ============================================================
+        // 辅助函数
+        // ============================================================
+
+        function addMessage(role, content, isPlaceholder = false) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            if (isPlaceholder) {
+                // 占位消息，内容稍后填充
+                const contentSpan = document.createElement('span');
+                contentSpan.className = 'content';
+                contentSpan.textContent = '';
+                div.appendChild(contentSpan);
+                // 光标
+                const cursor = document.createElement('span');
+                cursor.className = 'cursor';
+                div.appendChild(cursor);
+            } else {
+                div.textContent = content;
+            }
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return div;
+        }
+
+        function finishStreaming() {
+            isStreaming = false;
+            sendBtn.disabled = false;
+            stopBtn.style.display = 'none';
+            statusBadge.textContent = '● 已连接';
+            statusBadge.style.color = '#3fb950';
+            currentAssistantMessage = null;
+        }
+
+        function stopGeneration() {
+            if (isStreaming) {
+                // 关闭连接
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                // 移除光标
+                if (currentAssistantMessage) {
+                    const cursor = currentAssistantMessage.querySelector('.cursor');
+                    if (cursor) cursor.remove();
+                }
+                finishStreaming();
+                statusBadge.textContent = '⏹ 已停止';
+                statusBadge.style.color = '#d29922';
+                // 添加提示
+                const stopMsg = document.createElement('div');
+                stopMsg.className = 'message assistant';
+                stopMsg.textContent = '⏹ 已停止生成 (部分回复)';
+                stopMsg.style.color = '#8b949e';
+                stopMsg.style.fontStyle = 'italic';
+                chatMessages.appendChild(stopMsg);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        function clearChat() {
+            if (isStreaming) {
+                if (!confirm('正在生成中，确定要清空吗？')) return;
+                stopGeneration();
+            }
+            // 保留第一条欢迎消息
+            chatMessages.innerHTML = `
+                <div class="message assistant">
+                     你好！我是 AI 聊天机器人。输入消息开始对话吧！
+                </div>
+            `;
+            // 清空历史（调用后端接口）
+            if (sessionId) {
+                fetch(`/api/chat/history/${sessionId}`, {
+                    method: 'DELETE'
+                }).then(() => {
+                    console.log('历史已清空');
+                }).catch(err => console.error('清空历史失败:', err));
+            }
+        }
+
+        // ============================================================
+        // 事件绑定
+        // ============================================================
+
+        sendBtn.addEventListener('click', sendMessage);
+
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        stopBtn.addEventListener('click', stopGeneration);
+
+        clearBtn.addEventListener('click', clearChat);
+
+        // 自动聚焦输入框
+        messageInput.focus();
+
+        console.log('🤖 聊天机器人已加载');
+        console.log('会话ID:', sessionId || '未创建');
+    </script>
+</body>
+</html>
