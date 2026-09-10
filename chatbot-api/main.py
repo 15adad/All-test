@@ -2,12 +2,6 @@ from fastapi import FastAPI, Request
 
 app = FastAPI()
 
-
-@app.get("/")
-def root():
-    return {"message": "hello world"}
-
-
 if __name__ == "__main__":
     import uvicorn
 
