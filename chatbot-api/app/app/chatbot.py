@@ -2,8 +2,7 @@ import asyncio
 import json
 import random
 
-from fastapi.sse import ServerSentEvent
-
+from sse_starlette.sse import ServerSentEvent
 from app.history import add_message
 
 RESPONSES = {
