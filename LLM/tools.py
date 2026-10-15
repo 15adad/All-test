@@ -1,3 +1,4 @@
+import random
 from datetime import datetime, UTC
 
 from langchain_core.tools import tool
@@ -52,3 +53,24 @@ def random_number(min: int, max: int) -> str:
         Returns:
             随机整数
         """
+    if min > max:
+        return f"最小值不能大于最大值"
+    return f"随机整数为：{random.randint(min, max)}"
+
+
+@tool
+def word_count(text: str) -> str:
+    """统计一段文本的字符数和词数。
+
+    当用户想知道文本长度时使用。
+
+    Args:
+        text: 要统计的文本
+
+    Returns:
+        字符数和词数
+    """
+    char_count = len(text)
+    # 按**任意空白**分割（空格、制表符`\t`、换行`\n`），**自动忽略连续空白，首尾空白直接丢掉**
+    word_count = len(text.split())
+    return f"字符数：{char_count}，词数：{word_count}"
