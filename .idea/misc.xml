@@ -3,6 +3,7 @@
   <component name="Black">
     <option name="sdkName" value="D:\anaconda" />
   </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="LangChain" project-jdk-type="Python SDK" />
   <component name="PyPackaging">
     <option name="earlyReleasesAsUpgrades" value="true" />
   </component>

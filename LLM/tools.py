@@ -1,7 +1,10 @@
 import random
 from datetime import datetime, UTC
-
 from langchain_core.tools import tool
+
+from LLM.rag import _load_vectorstore
+
+_vectorstore = None
 
 
 @tool
@@ -74,3 +77,32 @@ def word_count(text: str) -> str:
     # 按**任意空白**分割（空格、制表符`\t`、换行`\n`），**自动忽略连续空白，首尾空白直接丢掉**
     word_count = len(text.split())
     return f"字符数：{char_count}，词数：{word_count}"
+
+
+@tool
+def search_notes(query: str) -> str:
+    """搜索用户的个人笔记。笔记内容包括 Python 编程和机器学习知识。
+
+    当用户询问笔记里的知识点、概念、定义、用法时使用这个工具。
+
+    Args:
+        query: 要搜索的问题，例如 "什么是装饰器" 或 "过拟合怎么解决"
+
+    Returns:
+        检索到的相关笔记片段
+    """
+    global _vectorstore
+    if _vectorstore is None:
+        _vectorstore = _load_vectorstore()
+
+    docs = _vectorstore.similarity_search(query, k=3)
+    if not docs:
+        return "笔记中没有找到相关内容"
+
+    #
+    #
+    results = []
+    for i, doc in enumerate(docs, 1):
+        source = doc.metadata.get("source", "未知来源")
+        results.append(f"[片段{i}来源{source}]\n{doc.page_content}")
+    return "\n\n---\n\n".join(results)

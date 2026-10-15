@@ -27,6 +27,7 @@ def build_vectorstore():
         chunk_overlap=5,  # 每个chunk之间的重叠字符数
         separators=separators,
     )
+
     chunks = splitter.split_documents(documents)
     logger.info(f"{len(chunks)} chunks are created")
     # 3.向量化chunk,embedding嵌入
