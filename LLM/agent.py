@@ -41,3 +41,28 @@ agent = create_agent(
 - 回答简洁、清楚、友好
 """
 )
+if __name__ == "__main__":
+    import logging
+
+    while True:
+        try:
+            user_input = input("\nYou:").strip()
+        except (KeyboardInterrupt, EOFError):
+            break
+        # 一次输出一段话，交互差
+        # result = agent.invoke(
+        #     {"messages": [{"role": "user", "content": user_input}]},
+        #     config={"configurable": {"thread_id": "user_one"}},
+        # )
+        # answer = result["messages"][-1]["content"]
+        # logging.info(answer)
+        for chunk in agent.stream(
+                {"messages": [{"role": "user","content": user_input}]},
+                config={"configurable": {"thread_id": "user_one"}},
+                stream_model="messages"
+        ):
+            # chunk 是一个元组 (message_chunk, metadata)
+            message_chunk, metadata = chunk
+            if message_chunk.content:
+                print(message_chunk.content, end="", flush=True) # logging没有end和flush
+        print()

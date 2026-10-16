@@ -40,11 +40,13 @@ def get_current_time() -> str:
         当前日期时间字符串
     """
     now = datetime.now()
-    return f"当前的时间是：{now.strftime("%Y-%m-%d %H:%M:%S，星期" + "一二三四五六日"[now.weekday()])} ，当前的时区是：{datetime.now(UTC)}"
+    weekday_cn = "一二三四五六日"[now.weekday()]
+    time_str = now.strftime("%Y-%m-%d %H:%M:%S")
+    return f"当前的时间是：{time_str}，星期{weekday_cn}，当前的时区是：{datetime.now(UTC)}"
 
 
 @tool
-def random_number(min: int, max: int) -> str:
+def random_number(min_value: int, max_value: int) -> str:
     """生成指定范围内的随机整数。
 
         当用户需要随机数、抽签、掷骰子时使用。
@@ -56,9 +58,9 @@ def random_number(min: int, max: int) -> str:
         Returns:
             随机整数
         """
-    if min > max:
+    if min_value > max_value:
         return f"最小值不能大于最大值"
-    return f"随机整数为：{random.randint(min, max)}"
+    return f"随机整数为：{random.randint(min_value, max_value)}"
 
 
 @tool

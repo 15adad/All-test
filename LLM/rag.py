@@ -6,9 +6,9 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 PERSIST_DIR = "./chroma_db"
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 # 自定义分隔符按优先级排序依次为段落、行、句号、感叹号、问号、空格、空字符串来切分
-separators = ["\n\n", "\n", "。", "！", "？", " ", ""],
+separators = ["\n\n", "\n", "。", "！", "？", " ", ""]
 
 
 def build_vectorstore():
@@ -17,14 +17,13 @@ def build_vectorstore():
         "docs",
         glob="**/*.txt",  # 递归加载docs下所有的txt文件
         loader_cls=UnstructuredFileLoader,  # 真正加载的loader类，自动识别文件类型，支持txt、pdf、docx等
-        loader_kwargs={"encoding": "utf-8"}
     )
     documents = loader.load()
     logger.info(f"Loaded {len(documents)} documents from docs directory")
     # 2.切块chunk,递归字符切分
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=20,  # 每个chunk的最大字符数
-        chunk_overlap=5,  # 每个chunk之间的重叠字符数
+        chunk_size=200,  # 每个chunk的最大字符数
+        chunk_overlap=50,  # 每个chunk之间的重叠字符数
         separators=separators,
     )
 
